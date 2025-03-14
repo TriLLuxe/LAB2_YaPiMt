@@ -1,0 +1,3 @@
+C:/6_sem/YApiMt/LAB2/cmake-build-debug/CMakeFiles/LAB2.dir
+C:/6_sem/YApiMt/LAB2/cmake-build-debug/CMakeFiles/edit_cache.dir
+C:/6_sem/YApiMt/LAB2/cmake-build-debug/CMakeFiles/rebuild_cache.dir
