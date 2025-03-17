@@ -266,6 +266,14 @@ public:
                     int index = delimitersTable.findIndexByValue("=");
                     tokenFile << "(" << 20 << ", " << index << ") =" << endl;
                 }
+            } else if (currentChar == '<' && inputFile.peek() == '<') {
+                inputFile.get();
+                int index = delimitersTable.findIndexByValue("<<");
+                tokenFile << "(" << 20 << ", " << index << ") <<" << endl;
+            } else if (currentChar == '>' && inputFile.peek() == '>') {
+                inputFile.get();
+                int index = delimitersTable.findIndexByValue(">>");
+                tokenFile << "(" << 20 << ", " << index << ") >>" << endl;
             } else if (delimitersTable.searchByValue(string(1, currentChar))) {
                 // разделители () ; {} []
                 int index = delimitersTable.findIndexByValue(string(1, currentChar));
