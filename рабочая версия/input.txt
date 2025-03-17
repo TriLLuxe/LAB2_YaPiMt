@@ -1,0 +1,9 @@
+int main() { 
+    long long x = 10; 
+    if (x == 10) { 
+        x = x + 1;
+    } 
+    // comment
+    /* this is a 
+    multi-line comment */
+}
