@@ -203,7 +203,7 @@ public:
     char currentChar;
     string tokenValue;
     int lineNumber = 1; 
-    string currentLine; // Текущая строка для отслеживания ошибок
+    string currentLine; // текущая строка для отслеживания ошибок
 
     while (inputFile.get(currentChar)) {
         if (currentChar == '\n') {
@@ -281,7 +281,7 @@ public:
                     int index = delimitersTable.findIndexByValue(combinedOp);
                     tokenFile << "(" << 20 << ", " << index << ") " << combinedOp << endl;
                 } else if (nextChar == '*') {
-                    //многострочные комментарии
+                    // многострочные комментарии
                     inputFile.get();
                     while (inputFile.get(currentChar)) {
                         currentLine += currentChar; 
@@ -298,7 +298,7 @@ public:
                         throwError("Unclosed multi-line comment", lineNumber, currentLine);
                     }
                 } else if (nextChar == '/') {
-                    //однострочные
+                    // однострочные комментарии
                     inputFile.ignore(numeric_limits<streamsize>::max(), '\n');
                     lineNumber++;
                     currentLine.clear();
@@ -340,7 +340,12 @@ public:
                     do {
                         tokenValue += currentChar;
                     } while (inputFile.get(currentChar) && isdigit(currentChar));
-                    inputFile.unget();
+
+                    if (isalpha(currentChar) || currentChar == '_') {
+                        throwError("Invalid character after number: " + string(1, currentChar), lineNumber, currentLine);
+                    } else {
+                        inputFile.unget();
+                    }
                     string temp = tokenValue;
                     constantsTable.add(temp, 40);
                     int index = constantsTable.search(tokenValue);
