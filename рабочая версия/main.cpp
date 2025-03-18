@@ -200,64 +200,40 @@ public:
     }
 
     void scan() {
-        char currentChar;
-        string tokenValue;
-        int lineNumber = 1; 
-        string currentLine; //текущая строка для отслеживания ошибок
+    char currentChar;
+    string tokenValue;
+    int lineNumber = 1; 
+    string currentLine; // Текущая строка для отслеживания ошибок
 
-        while (inputFile.get(currentChar)) {
-            if (currentChar == '\n') {
-                lineNumber++;
-                currentLine.clear();
-                continue;
-            }
+    while (inputFile.get(currentChar)) {
+        if (currentChar == '\n') {
+            lineNumber++;
+            currentLine.clear();
+            continue;
+        }
+        currentLine += currentChar;
 
-            currentLine += currentChar;
+        if (isspace(currentChar)) continue;
 
-            if (isspace(currentChar)) continue;
-
-            if (isalpha(currentChar)) {
-                // идентификаторы и ключевые слова
-                tokenValue = "";
-                do {
-                    tokenValue += currentChar;
-                } while (inputFile.get(currentChar) && (isalnum(currentChar) || currentChar == '_'));
-                inputFile.unget(); 
-
-                // "long long"
-                if (tokenValue == "long" && inputFile.peek() == ' ') {
-                    string nextToken;
-                    inputFile >> nextToken;
-                    if (nextToken == "long") {
-                        tokenValue += " " + nextToken;
-                    } else {
-                        inputFile.unget();
-                    }
-                }
-
-                if (keywordsTable.searchByValue(tokenValue)) {
-                    int index = keywordsTable.findIndexByValue(tokenValue);
-                    tokenFile << "(" << 10 << ", " << index << ") " << tokenValue << endl;
+        switch (currentChar) {
+            case '*':
+            case '+':
+            case '-':
+            case '%': {
+                // проверка на комбинированные операции (*=, +=, -=, %=)
+                if (inputFile.peek() == '=') {
+                    inputFile.get();
+                    string combinedOp = string(1, currentChar) + "=";
+                    
+                    int index = delimitersTable.findIndexByValue(combinedOp);
+                    tokenFile << "(" << 20 << ", " << index << ") " << combinedOp << endl;
                 } else {
-                    string temp = tokenValue;
-                    identifiersTable.add(temp, 30);
-                    int index = identifiersTable.search(tokenValue);
-                    tokenFile << "(" << 30 << ", " << index << ") " << tokenValue << endl;
+                    int index = delimitersTable.findIndexByValue(string(1, currentChar));
+                    tokenFile << "(" << 20 << ", " << index << ") " << currentChar << endl;
                 }
-            } else if (isdigit(currentChar)) {
-                // константы
-                tokenValue = "";
-                do {
-                    tokenValue += currentChar;
-                } while (inputFile.get(currentChar) && isdigit(currentChar));
-                inputFile.unget();
-
-                string temp = tokenValue;
-                constantsTable.add(temp, 40);
-                int index = constantsTable.search(tokenValue);
-                tokenFile << "(" << 40 << ", " << index << ") " << tokenValue << endl;
-            } else if (currentChar == '=') {
-                // операции
+                break;
+            }
+            case '=': {
                 if (inputFile.peek() == '=') {
                     inputFile.get();
                     int index = delimitersTable.findIndexByValue("==");
@@ -266,29 +242,51 @@ public:
                     int index = delimitersTable.findIndexByValue("=");
                     tokenFile << "(" << 20 << ", " << index << ") =" << endl;
                 }
-            } else if (currentChar == '<' && inputFile.peek() == '<') {
-                inputFile.get();
-                int index = delimitersTable.findIndexByValue("<<");
-                tokenFile << "(" << 20 << ", " << index << ") <<" << endl;
-            } else if (currentChar == '>' && inputFile.peek() == '>') {
-                inputFile.get();
-                int index = delimitersTable.findIndexByValue(">>");
-                tokenFile << "(" << 20 << ", " << index << ") >>" << endl;
-            } else if (delimitersTable.searchByValue(string(1, currentChar))) {
-                // разделители () ; {} []
+                break;
+            }
+            case '<': {
+                if (inputFile.peek() == '<') {
+                    inputFile.get();
+                    int index = delimitersTable.findIndexByValue("<<");
+                    tokenFile << "(" << 20 << ", " << index << ") <<" << endl;
+                } else {
+                    int index = delimitersTable.findIndexByValue("<");
+                    tokenFile << "(" << 20 << ", " << index << ") <" << endl;
+                }
+                break;
+            }
+            case '>': {
+                if (inputFile.peek() == '>') {
+                    inputFile.get();
+                    int index = delimitersTable.findIndexByValue(">>");
+                    tokenFile << "(" << 20 << ", " << index << ") >>" << endl;
+                } else {
+                    int index = delimitersTable.findIndexByValue(">");
+                    tokenFile << "(" << 20 << ", " << index << ") >" << endl;
+                }
+                break;
+            }
+            case '(': case ')': case ';': case '{': case '}': case '[': case ']': {
+                // другие разделители () ; {} []
                 int index = delimitersTable.findIndexByValue(string(1, currentChar));
                 tokenFile << "(" << 20 << ", " << index << ") " << currentChar << endl;
-                // комментарии
-            } else if (currentChar == '/') {
+                break;
+            }
+            case '/': {
                 char nextChar = inputFile.peek(); 
-                if (nextChar == '*') {
-                    //многострочные
-                    inputFile.get(); // пропускаем '*'
+                if (nextChar == '=') { 
+                    inputFile.get(); 
+                    string combinedOp = string(1, currentChar) + "="; 
+                    
+                    int index = delimitersTable.findIndexByValue(combinedOp);
+                    tokenFile << "(" << 20 << ", " << index << ") " << combinedOp << endl;
+                } else if (nextChar == '*') {
+                    //многострочные комментарии
+                    inputFile.get();
                     while (inputFile.get(currentChar)) {
                         currentLine += currentChar; 
-                        // конец многострочного комментраия
                         if (currentChar == '*' && inputFile.peek() == '/') {
-                            inputFile.get(); // пропускаем '/'
+                            inputFile.get();
                             break;
                         }
                         if (currentChar == '\n') {
@@ -307,11 +305,54 @@ public:
                 } else {
                     throwError("Unknown symbol: / (expected * or / for comment)", lineNumber, currentLine);
                 }
-            } else {
-                throwError("Unknown symbol: " + string(1, currentChar), lineNumber, currentLine);
+                break;
+            }
+            default: {
+                if (isalpha(currentChar)) {
+                    tokenValue = "";
+                    do {
+                        tokenValue += currentChar;
+                    } while (inputFile.get(currentChar) && (isalnum(currentChar) || currentChar == '_'));
+                    inputFile.unget(); 
+
+                    //"long long"
+                    if (tokenValue == "long" && inputFile.peek() == ' ') {
+                        string nextToken;
+                        inputFile >> nextToken;
+                        if (nextToken == "long") {
+                            tokenValue += " " + nextToken;
+                        } else {
+                            inputFile.unget();
+                        }
+                    }
+
+                    if (keywordsTable.searchByValue(tokenValue)) {
+                        int index = keywordsTable.findIndexByValue(tokenValue);
+                        tokenFile << "(" << 10 << ", " << index << ") " << tokenValue << endl;
+                    } else {
+                        string temp = tokenValue;
+                        identifiersTable.add(temp, 30);
+                        int index = identifiersTable.search(tokenValue);
+                        tokenFile << "(" << 30 << ", " << index << ") " << tokenValue << endl;
+                    }
+                } else if (isdigit(currentChar)) {
+                    tokenValue = "";
+                    do {
+                        tokenValue += currentChar;
+                    } while (inputFile.get(currentChar) && isdigit(currentChar));
+                    inputFile.unget();
+                    string temp = tokenValue;
+                    constantsTable.add(temp, 40);
+                    int index = constantsTable.search(tokenValue);
+                    tokenFile << "(" << 40 << ", " << index << ") " << tokenValue << endl;
+                } else {
+                    throwError("Unknown symbol: " + string(1, currentChar), lineNumber, currentLine);
+                }
+                break;
             }
         }
     }
+}
     void throwError(const string& message, int lineNumber, const string& currentLine) {
         errorFile << "Error on line " << lineNumber << ": " << message << endl;
         cout << "Error on line " << lineNumber << ": " << message << endl;
